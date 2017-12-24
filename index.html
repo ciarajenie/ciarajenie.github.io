@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+	<title>Where's my food</title>
+	<style type="text/css">
+		html, body, div, span, applet, object, iframe,
+		h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+		a, abbr, acronym, address, big, cite, code,
+		del, dfn, em, img, ins, kbd, q, s, samp,
+		small, strike, strong, sub, sup, tt, var,
+		b, u, i, center,
+		dl, dt, dd, ol, ul, li,
+		fieldset, form, label, legend,
+		table, caption, tbody, tfoot, thead, tr, th, td,
+		article, aside, canvas, details, embed, 
+		figure, figcaption, footer, header, hgroup, 
+		menu, nav, output, ruby, section, summary,
+		time, mark, audio, video {
+			margin: 0;
+			padding: 0;
+			border: 0;
+			font-size: 100%;
+			font: inherit;
+			vertical-align: baseline;
+		}
+		/* HTML5 display-role reset for older browsers */
+		article, aside, details, figcaption, figure, 
+		footer, header, hgroup, menu, nav, section {
+			display: block;
+		}
+		body {
+			line-height: 1;
+		}
+		ol, ul {
+			list-style: none;
+		}
+		blockquote, q {
+			quotes: none;
+		}
+		blockquote:before, blockquote:after,
+		q:before, q:after {
+			content: '';
+			content: none;
+		}
+		table {
+			border-collapse: collapse;
+			border-spacing: 0;
+		}
+		/* End CSS Reset */
+
+		#container {
+			height: 100%;
+			width: 100%;
+		}
+
+		#nav_container {
+			width:50%;
+			margin-right: auto;
+			margin-left: auto;
+			text-align: center;
+			margin-top: 50px;
+		}
+
+		#nav_container button {
+			background-color: #FFFFFF; 
+		    color: #ff541c;
+		    border: 2px solid #ff541c; 
+		    border-radius: 8px;
+		    padding: 5px 10px;
+		    text-align: center;
+		    text-decoration: none;
+		    display: inline-block;
+		    font-size: 4.2vh;
+		    cursor: pointer;
+		}
+
+		#nav_container button:hover {
+			background-color: #ff541c; 
+			color: #FFFFFF;
+		}
+
+		#nav_container button:active {
+			background-color: #ff784c; 
+			color: #FFFFFF;
+		}
+
+		#nav_container button:focus { outline: none; }
+
+		.error_text {
+			color: #c40b0b;
+		}
+
+		#error_message {
+			margin-top: 10px;
+			font-size: 2.2vh;
+			height: 20px;
+		}
+
+		#result_container {
+			height: 60vh;
+			width: 100%;
+		}
+
+		#map_container {
+			margin-right: auto;
+			margin-left: auto;
+			width: 70%;
+			height: 95%;
+			max-height: 95%;
+			min-height: 80%;
+		}
+
+		#info_container {
+			width: 70%;
+			margin-left: auto;
+			margin-right: auto;
+		}
+
+		#info_container table {
+			font-family: "Courier New", serif;
+			margin-left: auto;
+			margin-right: auto;
+			font-size: 20px;
+		}
+
+		#address_heading {
+			font-size: 30px;
+			font-style: bold;
+		}
+
+	</style>
+</head>
+<body>
+	<div id="container">
+		<div id="nav_container">
+			<button onclick="getNearestFood()">Find my food!</button>
+			<h5 class="error_text" id="error_message">Ang bagal magload ni google maps :( </h5>				
+			
+		</div>
+		<div id="result_container">
+			<div id="map_container">
+				
+			</div>
+		</div>
+		<div id="info_container">
+			<table>
+				<tr>
+					<td id="address_heading"></td>
+				</tr>
+				<tr>
+					<td id="rating_heading"></td>
+				</tr>
+				<tr>
+					<td id="is_open_heading"></td>
+				</tr>
+			</table>
+		</div>
+	</div>
+	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDp9CPVolAqkcmP4bugKOhlJgWfLcLEBCc&libraries=places&callback=doneLoadingMaps"
+         async defer></script>
+	<script type="text/javascript">
+
+		var map, 
+			marker, 
+			service,
+			current_center, 
+			radius = 1000,
+			search_type = ['restaurant'],
+			imagePath = 'http://m.schuepfen.ch/icons/helveticons/black/60/Pin-location.png',
+			map_style = [
+				  {
+				    "elementType": "geometry",
+				    "stylers": [
+				      {
+				        "color": "#ebe3cd"
+				      }
+				    ]
+				  },
+				  {
+				    "elementType": "labels.text.fill",
+				    "stylers": [
+				      {
+				        "color": "#523735"
+				      }
+				    ]
+				  },
+				  {
+				    "elementType": "labels.text.stroke",
+				    "stylers": [
+				      {
+				        "color": "#f5f1e6"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "administrative",
+				    "elementType": "geometry.stroke",
+				    "stylers": [
+				      {
+				        "color": "#c9b2a6"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "administrative.land_parcel",
+				    "elementType": "geometry.stroke",
+				    "stylers": [
+				      {
+				        "color": "#dcd2be"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "administrative.land_parcel",
+				    "elementType": "labels.text.fill",
+				    "stylers": [
+				      {
+				        "color": "#ae9e90"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "landscape.natural",
+				    "elementType": "geometry",
+				    "stylers": [
+				      {
+				        "color": "#dfd2ae"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "poi",
+				    "elementType": "geometry",
+				    "stylers": [
+				      {
+				        "color": "#dfd2ae"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "poi",
+				    "elementType": "labels.text.fill",
+				    "stylers": [
+				      {
+				        "color": "#93817c"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "poi.park",
+				    "elementType": "geometry.fill",
+				    "stylers": [
+				      {
+				        "color": "#a5b076"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "poi.park",
+				    "elementType": "labels.text.fill",
+				    "stylers": [
+				      {
+				        "color": "#447530"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "road",
+				    "elementType": "geometry",
+				    "stylers": [
+				      {
+				        "color": "#f5f1e6"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "road.arterial",
+				    "elementType": "geometry",
+				    "stylers": [
+				      {
+				        "color": "#fdfcf8"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "road.highway",
+				    "elementType": "geometry",
+				    "stylers": [
+				      {
+				        "color": "#f8c967"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "road.highway",
+				    "elementType": "geometry.stroke",
+				    "stylers": [
+				      {
+				        "color": "#e9bc62"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "road.highway.controlled_access",
+				    "elementType": "geometry",
+				    "stylers": [
+				      {
+				        "color": "#e98d58"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "road.highway.controlled_access",
+				    "elementType": "geometry.stroke",
+				    "stylers": [
+				      {
+				        "color": "#db8555"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "road.local",
+				    "elementType": "labels.text.fill",
+				    "stylers": [
+				      {
+				        "color": "#806b63"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "transit.line",
+				    "elementType": "geometry",
+				    "stylers": [
+				      {
+				        "color": "#dfd2ae"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "transit.line",
+				    "elementType": "labels.text.fill",
+				    "stylers": [
+				      {
+				        "color": "#8f7d77"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "transit.line",
+				    "elementType": "labels.text.stroke",
+				    "stylers": [
+				      {
+				        "color": "#ebe3cd"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "transit.station",
+				    "elementType": "geometry",
+				    "stylers": [
+				      {
+				        "color": "#dfd2ae"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "water",
+				    "elementType": "geometry.fill",
+				    "stylers": [
+				      {
+				        "color": "#b9d3c2"
+				      }
+				    ]
+				  },
+				  {
+				    "featureType": "water",
+				    "elementType": "labels.text.fill",
+				    "stylers": [
+				      {
+				        "color": "#92998d"
+				      }
+				    ]
+				  }
+				];
+
+		function initMap() {
+			map = new google.maps.Map(document.getElementById('map_container'), {
+		    	center: current_center,
+		    	zoom: 17,
+		    	styles: map_style,
+		    	disableDefaultUI: true,
+		    	zoomControl: true
+
+		  	});
+			service = new google.maps.places.PlacesService(map);
+		  	createMarker(current_center);
+		  	document.getElementById('error_message').innerHTML = '';
+
+		  	google.maps.event.addDomListener(window, "resize", function() {
+				var center = map.getCenter();
+				google.maps.event.trigger(map, "resize");
+				map.setCenter(center);
+			});
+		}
+		
+		function doneLoadingMaps(e) {
+			if (navigator.geolocation) {
+				navigator.geolocation.getCurrentPosition(function(p) {
+					current_center = new google.maps.LatLng(p.coords.latitude, p.coords.longitude);
+					initMap();
+				});
+			} else {
+				current_center = new google.maps.LatLng(14.112535, 121.560596);
+				initMap();
+				alert("geolocation not supported");
+			}
+		}
+
+		function getNearestFood() {
+			document.getElementById('error_message').innerHTML = 'Naghahanap ng petmalung makakainan . . . . ';
+
+			service.nearbySearch({
+				location: current_center,
+				radius: radius,
+				type: search_type
+				}, foundPlaces);
+		}
+
+		function foundPlaces(results, status) {
+			var choice = 0, picked;
+
+			if (status !== google.maps.places.PlacesServiceStatus.OK) {
+				console.error(status);
+				document.getElementById('error_message').innerHTML = 'HOLYCRAP! Something went wrong!';
+				return;
+			}
+			if (results.length == 0) {
+				document.getElementById('error_message').innerHTML = 'Nasa bundok ka ba? Walang kaming makitang kainan lodi!';
+				return;
+			}
+
+			document.getElementById('error_message').innerHTML = '';
+			choice = Math.floor(Math.random() * results.length);
+			picked = results[choice]
+			document.getElementById('address_heading').innerHTML = picked.name;
+			if (picked.rating) {
+				document.getElementById('rating_heading').innerHTML = 'Rating: ' + picked.rating;
+			} else {
+				document.getElementById('rating_heading').innerHTML = 'Rating: N/A';
+			}
+			if (picked.opening_hours) {
+				document.getElementById('is_open_heading').innerHTML = picked.opening_hours.open_now ? 'Open right now': 'Currently closed';
+			} else {
+				document.getElementById('is_open_heading').innerHTML = '';
+			}
+
+			createMarker(picked.geometry.location);
+		}
+
+		function createMarker(pos) {
+			if (marker) {
+				marker.setMap(null);
+			}
+			marker = new google.maps.Marker({
+				map: map,
+				position: pos,
+				icon: imagePath
+			});
+			map.panTo(pos);
+		}
+
+	</script>
+</body>
+</html>
